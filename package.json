@@ -1,5 +1,5 @@
 {
-  "name": "node-kinect",
+  "name": "kinect",
   "version": "0.0.0",
   "description": "libfreenect bindings for node",
   "main": "index.js",

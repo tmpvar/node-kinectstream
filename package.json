@@ -8,5 +8,9 @@
   },
   "repository": "",
   "author": "",
-  "license": "BSD"
+  "license": "BSD",
+  "dependencies": {
+    "bindings": "~1.0.0",
+    "ansi": "~0.1.2"
+  }
 }

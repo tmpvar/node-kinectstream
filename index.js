@@ -1,29 +1,26 @@
 var
   binding = require('bindings')('kinect'),
-  Stream = require('stream');
+  Stream = require('stream'),
+  s;
 
-binding.init();
 
-module.exports = {
-  createDepthStream : function() {
-    var s = new Stream();
-    s.readable = true;
+module.exports.createStream = function(type) {
+  // TODO: allow multiple devices
+  if (s) { return s; }
 
+  s = new Stream();
+  s.readable = true;
+
+  binding.init();
+
+  if (type === 'depth') {
     binding.getDepthStream(function(image) {
-      s.emit('data', image);
+      !s.paused && s.emit('data', image);
     });
-
-    return s;
-  },
-
-  createVideoStream : function() {
-    var s = new Stream()
-    s.readable = true;
-
+  } else {
     binding.getVideoStream(function(image) {
-      s.emit('data', image);
+      !s.paused && s.emit('data', image);
     });
-
-    return s;
   }
+  return s;
 };

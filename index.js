@@ -4,23 +4,35 @@ var
   s;
 
 
-module.exports.createStream = function(type) {
+module.exports.createStream = function(type, resolution, fps) {
   // TODO: allow multiple devices
   if (s) { return s; }
+
+  fps = fps || 30;
 
   s = new Stream();
   s.readable = true;
 
+  s.lastFrame = 0;
+
   binding.init();
 
+  var emit = function(image) {
+    if (1000/fps + s.lastFrame < Date.now()) {
+      !s.paused && s.emit('data', image);
+      s.lastFrame = Date.now();
+    }
+  };
+
   if (type === 'depth') {
-    binding.getDepthStream(function(image) {
-      !s.paused && s.emit('data', image);
-    });
+    binding.getDepthStream(emit);
   } else {
-    binding.getVideoStream(function(image) {
-      !s.paused && s.emit('data', image);
-    });
+
+    var res = [null, '640x480', '1280x1024']
+    var selected = res.indexOf(resolution);
+    selected = selected > -1 ? selected : 0;
+
+    binding.getVideoStream(selected, emit);
   }
   return s;
 };

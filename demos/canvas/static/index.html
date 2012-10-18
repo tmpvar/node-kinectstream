@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+<head>
+  <title>kinect - canvas</title>
+  <script type="text/javascript" src="/binary.js"></script>
+</head>
+<body>
+  <canvas id="img" width="640" height="480"></canvas>
+
+  <script type="text/javascript">
+    var img = document.getElementById('img');
+    var ctx = img.getContext('2d');
+    var imageData = ctx.getImageData(0, 0, img.width, img.height);
+
+    (new BinaryClient('ws://localhost:10001')).on('stream', function(stream) {
+      var where = 0;
+      stream.on('data', function newFrame(d) {
+
+        // Convert to RGBa
+        var clamped = new Uint8Array(d)
+        for (var i = 0; i<clamped.byteLength; i+=3) {
+          imageData.data[where++] = clamped[i];
+          imageData.data[where++] = clamped[i+1];
+          imageData.data[where++] = clamped[i+2];
+          imageData.data[where++] = 255;
+        }
+
+        if (where = imageData.data.byteLength-1) {
+          where = 0;
+          console.log('reached end')
+          ctx.putImageData(imageData, 0, 0);
+        }
+      });
+    });
+
+  </script>
+</body>
+</html>

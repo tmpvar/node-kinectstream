@@ -7,7 +7,7 @@ var
   pixelHeight = imageHeight * 3,
   w, widthRatio, h, heightRatio, aspect;
 
-kinect.getVideoStream(function(data) {
+kinect.createStream('video', '1280x1024').on('data', function(data) {
 
   w = process.stdout.columns;
   h = process.stdout.rows;
@@ -23,7 +23,7 @@ kinect.getVideoStream(function(data) {
     for (var col = 0; col <= w; col++) {
       cursor.goto(col, row);
 
-      var normal = (row * pixelWidth*Math.floor(widthRatio/aspect))  + col*widthRatio;
+      var normal = (row * pixelWidth*Math.floor(widthRatio/2))  + col*widthRatio;
       normal-= normal%3;
       var r = data[normal], g = data[normal+1], b = data[normal+2];
 

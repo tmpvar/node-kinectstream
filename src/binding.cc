@@ -17,8 +17,28 @@ Persistent<Function> getDepthStreamCallback;
 freenect_context *f_ctx;
 freenect_device *f_dev;
 uint8_t *rgb_buffer, *depth_buffer;
+freenect_resolution video_resolution;
 
 uv_idle_t idler;
+
+freenect_resolution getResolution(int res) {
+
+  switch (res) {
+    case 2:
+      return FREENECT_RESOLUTION_HIGH;
+    break;
+
+    case 1:
+      return FREENECT_RESOLUTION_MEDIUM;
+    break;
+
+    case 0:
+      return FREENECT_RESOLUTION_LOW;
+    break;
+  }
+
+  return FREENECT_RESOLUTION_LOW;
+}
 
 void freenect_tick(uv_idle_t* handle, int status) {
   freenect_process_events(f_ctx);
@@ -26,8 +46,6 @@ void freenect_tick(uv_idle_t* handle, int status) {
 
 Handle<Value> Init(const Arguments& args) {
   HandleScope scope;
-
-  rgb_buffer = (uint8_t*)malloc(freenect_find_video_mode(FREENECT_RESOLUTION_HIGH, FREENECT_VIDEO_RGB).bytes);
 
   if (freenect_init(&f_ctx, NULL) < 0) {
     ThrowException(Exception::TypeError(String::New("freenect_init() failed")));
@@ -44,10 +62,6 @@ Handle<Value> Init(const Arguments& args) {
   if (freenect_open_device(f_ctx, &f_dev, 0) < 0) {
     ThrowException(Exception::TypeError(String::New("freenect_init() failed")));
   }
-
-
-  uv_idle_init(uv_default_loop(), &idler);
-  uv_idle_start(&idler, freenect_tick);
 
   return scope.Close(Undefined());
 }
@@ -72,7 +86,7 @@ void callJSCallbackWithBuffer(Persistent<Function> cb, Buffer *buffer) {
 void depth_callback(freenect_device *dev, void *depth, uint32_t timestamp) {
 
   HandleScope scope;
-  unsigned int length = 640*480;
+  unsigned int length = 320*240*3;
   Buffer *buf = Buffer::New(length);
 
   memcpy(Buffer::Data(buf), depth_buffer, length);
@@ -86,7 +100,8 @@ void video_callback(freenect_device *dev, void *rgb, uint32_t timestamp) {
 
   HandleScope scope;
 
-  unsigned int length = 1280*1024*3;
+  unsigned int length = freenect_find_video_mode(video_resolution, FREENECT_VIDEO_RGB).bytes;
+
   Buffer *buf = Buffer::New(length);
 
   memcpy(Buffer::Data(buf), rgb_buffer, length);
@@ -97,21 +112,45 @@ void video_callback(freenect_device *dev, void *rgb, uint32_t timestamp) {
 }
 
 Handle<Value> GetDepthStream(const Arguments& args) {
+  HandleScope scope;
+
   freenect_set_depth_callback(f_dev, depth_callback);
-  freenect_set_depth_mode(f_dev, freenect_find_depth_mode(FREENECT_RESOLUTION_HIGH, FREENECT_DEPTH_11BIT));
+  depth_buffer = (uint8_t*)malloc(freenect_find_depth_mode(FREENECT_RESOLUTION_MEDIUM, FREENECT_DEPTH_REGISTERED).bytes);
+  freenect_set_depth_mode(f_dev, freenect_find_depth_mode(FREENECT_RESOLUTION_MEDIUM, FREENECT_DEPTH_REGISTERED));
   freenect_set_depth_buffer(f_dev, depth_buffer);
   freenect_start_depth(f_dev);
+  freenect_stop_video(f_dev);
+
+  getDepthStreamCallback = Persistent<Function>::New(Handle<Function>::Cast(args[0]));
+
+  uv_idle_init(uv_default_loop(), &idler);
+  uv_idle_start(&idler, freenect_tick);
+
+  return scope.Close(Undefined());
 }
 
 Handle<Value> GetVideoStream(const Arguments& args) {
   HandleScope scope;
 
+  if (!args[0]->IsNumber()) {
+    ThrowException(Exception::TypeError(String::New("video stream expects resolution")));
+    return scope.Close(Undefined());
+  }
+
+  video_resolution = getResolution(args[0]->IntegerValue());
+  rgb_buffer = (uint8_t*)malloc(freenect_find_video_mode(video_resolution, FREENECT_VIDEO_RGB).bytes);
+
   freenect_set_video_callback(f_dev, video_callback);
-  freenect_set_video_mode(f_dev, freenect_find_video_mode(FREENECT_RESOLUTION_MEDIUM, FREENECT_VIDEO_IR_8BIT));
+  freenect_set_video_mode(f_dev, freenect_find_video_mode(video_resolution, FREENECT_VIDEO_RGB));
+
   freenect_set_video_buffer(f_dev, rgb_buffer);
   freenect_start_video(f_dev);
+  freenect_stop_depth(f_dev);
 
-  getVideoStreamCallback = Persistent<Function>::New(Handle<Function>::Cast(args[0]));
+  getVideoStreamCallback = Persistent<Function>::New(Handle<Function>::Cast(args[1]));
+
+  uv_idle_init(uv_default_loop(), &idler);
+  uv_idle_start(&idler, freenect_tick);
 
   return scope.Close(Number::New(1));
 }
@@ -124,7 +163,7 @@ void init(Handle<Object> target) {
       FunctionTemplate::New(GetVideoStream)->GetFunction());
 
   target->Set(String::NewSymbol("getDepthStream"),
-      FunctionTemplate::New(GetVideoStream)->GetFunction());
+      FunctionTemplate::New(GetDepthStream)->GetFunction());
 }
 
 NODE_MODULE(kinect, init)

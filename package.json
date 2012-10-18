@@ -11,6 +11,10 @@
   "license": "BSD",
   "dependencies": {
     "bindings": "~1.0.0",
-    "ansi": "~0.1.2"
+    "ansi": "~0.1.2",
+    "open": "0.0.2",
+    "ecstatic": "~0.1.6",
+    "binaryjs": "~0.1.4",
+    "buffers": "~0.1.1"
   }
 }

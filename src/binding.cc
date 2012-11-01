@@ -155,6 +155,50 @@ Handle<Value> GetVideoStream(const Arguments& args) {
   return scope.Close(Number::New(1));
 }
 
+Handle<Value> SetLED(const Arguments& args) {
+  HandleScope scope;
+
+  if (!args[0]->IsNumber()) {
+    ThrowException(Exception::TypeError(String::New("color code should be a number")));
+    return scope.Close(Boolean::New(false));
+  }
+
+  freenect_led_options code = (freenect_led_options) args[0]->IntegerValue();
+
+  if (freenect_set_led(f_dev, code) < 0) {
+    return scope.Close(Boolean::New(false));
+  }
+
+  return scope.Close(Boolean::New(true));
+}
+
+Handle<Value> SetTilt(const Arguments& args) {
+  HandleScope scope;
+
+  if (!args[0]->IsNumber()) {
+    ThrowException(Exception::TypeError(String::New("tilt degrees should be a number")));
+    return scope.Close(Boolean::New(false));
+  }
+
+  if (freenect_set_tilt_degs(f_dev, args[0]->IntegerValue()) < 0) {
+    return scope.Close(Boolean::New(false));
+  }
+
+  return scope.Close(Boolean::New(true));
+}
+
+Handle<Value> GetTilt(const Arguments& args) {
+  HandleScope scope;
+
+  if (freenect_update_tilt_state(f_dev) < 0){
+    return scope.Close(Undefined());
+  }
+
+  freenect_raw_tilt_state* state = freenect_get_tilt_state(f_dev);
+
+  return scope.Close(Integer::New(freenect_get_tilt_degs(state)));
+}
+
 void init(Handle<Object> target) {
   target->Set(String::NewSymbol("init"),
       FunctionTemplate::New(Init)->GetFunction());
@@ -164,6 +208,15 @@ void init(Handle<Object> target) {
 
   target->Set(String::NewSymbol("getDepthStream"),
       FunctionTemplate::New(GetDepthStream)->GetFunction());
+
+  target->Set(String::NewSymbol("setLED"),
+      FunctionTemplate::New(SetLED)->GetFunction());
+
+  target->Set(String::NewSymbol("setTilt"),
+      FunctionTemplate::New(SetTilt)->GetFunction());
+
+  target->Set(String::NewSymbol("getTilt"),
+      FunctionTemplate::New(GetTilt)->GetFunction());
 }
 
 NODE_MODULE(kinect, init)

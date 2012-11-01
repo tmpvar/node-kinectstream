@@ -187,6 +187,18 @@ Handle<Value> SetTilt(const Arguments& args) {
   return scope.Close(Boolean::New(true));
 }
 
+Handle<Value> GetTilt(const Arguments& args) {
+  HandleScope scope;
+
+  if (freenect_update_tilt_state(f_dev) < 0){
+    return scope.Close(Undefined());
+  }
+
+  freenect_raw_tilt_state* state = freenect_get_tilt_state(f_dev);
+
+  return scope.Close(Integer::New(freenect_get_tilt_degs(state)));
+}
+
 void init(Handle<Object> target) {
   target->Set(String::NewSymbol("init"),
       FunctionTemplate::New(Init)->GetFunction());
@@ -202,6 +214,9 @@ void init(Handle<Object> target) {
 
   target->Set(String::NewSymbol("setTilt"),
       FunctionTemplate::New(SetTilt)->GetFunction());
+
+  target->Set(String::NewSymbol("getTilt"),
+      FunctionTemplate::New(GetTilt)->GetFunction());
 }
 
 NODE_MODULE(kinect, init)

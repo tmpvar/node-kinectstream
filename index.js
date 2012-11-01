@@ -47,6 +47,12 @@ module.exports = {
     binding.setLED(idx);
   },
 
-  tilt: binding.setTilt
+  tilt: function(degs) {
+    if (degs) {
+      return binding.setTilt(degs);
+    } else {
+      return binding.getTilt();
+    }
+  }
 
 };

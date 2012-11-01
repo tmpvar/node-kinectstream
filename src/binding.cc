@@ -155,6 +155,25 @@ Handle<Value> GetVideoStream(const Arguments& args) {
   return scope.Close(Number::New(1));
 }
 
+Handle<Value> SetLED(const Arguments& args) {
+  HandleScope scope;
+
+  if (!args[0]->IsNumber()) {
+    ThrowException(Exception::TypeError(String::New("color code should be a number")));
+    return scope.Close(Boolean::New(false));
+  }
+
+  freenect_led_options code = (freenect_led_options) args[0]->IntegerValue();
+
+  uv_idle_init(uv_default_loop(), &idler);
+  uv_idle_start(&idler, freenect_tick);
+  if (freenect_set_led(f_dev, code) < 0) {
+    return scope.Close(Boolean::New(false));
+  }
+
+  return scope.Close(Boolean::New(true));
+}
+
 void init(Handle<Object> target) {
   target->Set(String::NewSymbol("init"),
       FunctionTemplate::New(Init)->GetFunction());
@@ -164,6 +183,9 @@ void init(Handle<Object> target) {
 
   target->Set(String::NewSymbol("getDepthStream"),
       FunctionTemplate::New(GetDepthStream)->GetFunction());
+
+  target->Set(String::NewSymbol("setLED"),
+      FunctionTemplate::New(SetLED)->GetFunction());
 }
 
 NODE_MODULE(kinect, init)

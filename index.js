@@ -45,6 +45,8 @@ module.exports = {
       return false;
     }
     binding.setLED(idx);
-  }
+  },
+
+  tilt: binding.setTilt
 
 };
